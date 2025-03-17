@@ -29,9 +29,9 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IAddonLifecycle AddonLifeCycle { get; private set; } = null!;
     [PluginService] internal static IGameConfig GameConfig { get; private set; } = null!;
 
-    private Dictionary<string, Role> texturePathToClass = new Dictionary<string, Role>();
+    private Dictionary<string, Role> texturePathToClass = new Dictionary<string, Role>(); // Dictionary that matches job icon filename to a role.
 
-    public void PopulateTexturePathToClassDictionary()
+    public void PopulateTexturePathToClassDictionary() // Function that fills the dictionary with entries
     {
         texturePathToClass.Clear();
         texturePathToClass.Add("062106", Role.HEALER);
@@ -77,40 +77,40 @@ public sealed class Plugin : IDalamudPlugin
         texturePathToClass.Add("062573", Role.DPS);
     }
 
-    public string TextureIDFromPath(string path)
+    public string TextureIDFromPath(string path) //Takes a path arg and runs it through a regex to grab the .tex file name
     {
         var match = Regex.Match(path, @"ui/icon/\d+/(\d+)");
         return match.Groups[1].Value;
     }
 
-    public Role RoleFromTexturePath(string path)
+    public Role RoleFromTexturePath(string tex) // Function that returns the role from a file name.
     {
-        return texturePathToClass.GetValueOrDefault(TextureIDFromPath(path), Role.OTHER);
+        return texturePathToClass.GetValueOrDefault(TextureIDFromPath(tex), Role.OTHER); // Search the dictionary for the filename, if found return the Role, if not found, return OTHER, which is a role in FFXIV
     }
 
     public Plugin()
     {
-        PopulateTexturePathToClassDictionary();
-        AddonLifeCycle.RegisterListener(AddonEvent.PreDraw, new[] { "_PartyList" }, OnPreDraw);
+        PopulateTexturePathToClassDictionary(); // Ininstantiate dictionary
+        AddonLifeCycle.RegisterListener(AddonEvent.PreDraw, new[] { "_PartyList" }, OnPreDraw); // Add a PartyList PreDraw event listener
     }
 
     private unsafe void OnPreDraw(AddonEvent type, AddonArgs args)
     {
-        Colorize();
+        Colorize(); // Call our main function on PreDraw, which is every time the PartyList is ready to be updated.
     }
 
-    public unsafe void ColorTextNodes(AtkTextNode* name, AtkImageNode* jobIcon)
+    public unsafe void ColorTextNodes(AtkTextNode* name, AtkImageNode* jobIcon) // Function that takes an AtkTextNode* called name & an AtkImageNode* called jobIcon as args
     {
-        if (name == null || String.IsNullOrEmpty(name->NodeText.ToString()))
+        if (name == null || String.IsNullOrEmpty(name->NodeText.ToString())) // If the party slot we're iterating over is empty, we skip it
         {
             return;
         }
 
-        var isMissing = name->NodeText.ToString()[1] == 63 && name->NodeText.ToString()[2] == 63;
+        var isMissing = name->NodeText.ToString()[1] == 63 && name->NodeText.ToString()[2] == 63; // We check if the party member is missing by checking for 2 question mark characters. 
 
-        if (isMissing == false)
+        if (isMissing == false) // If there is no question marks in the level, we execute everything in the if statement.
         {
-            var jobIconPath = Marshal.PtrToStringAnsi(new(jobIcon->PartsList->Parts[0].UldAsset->AtkTexture.Resource->TexFileResourceHandle->ResourceHandle.FileName.BufferPtr));
+            var jobIconPath = Marshal.PtrToStringAnsi(new(jobIcon->PartsList->Parts[0].UldAsset->AtkTexture.Resource->TexFileResourceHandle->ResourceHandle.FileName.BufferPtr)); // File name nested in a bunch of pointers in the AtkImageNode*
 
             if (jobIconPath == null)
             {
@@ -146,11 +146,6 @@ public sealed class Plugin : IDalamudPlugin
         {
             ColorTextNodes(member.Name, (AtkImageNode*)member.UnknownB0);
         }
-    }
-
-    private void OnCommand(string command, string args)
-    {
-        Colorize();
     }
 
     public void Dispose()
