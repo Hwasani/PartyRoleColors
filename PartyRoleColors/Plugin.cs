@@ -9,6 +9,8 @@ using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.Addon.Lifecycle;
 using System.Text.RegularExpressions;
 using Dalamud.Game.Config;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using Lumina.Excel.Sheets;
 
 namespace PartyRoleColors;
 
@@ -37,12 +39,17 @@ public sealed class Plugin : IDalamudPlugin
         texturePathToClass.Add("062128", Role.HEALER);
         texturePathToClass.Add("062133", Role.HEALER);
         texturePathToClass.Add("062140", Role.HEALER);
+        texturePathToClass.Add("062231", Role.HEALER);
+        texturePathToClass.Add("062572", Role.HEALER);
         texturePathToClass.Add("062101", Role.TANK);
         texturePathToClass.Add("062103", Role.TANK);
         texturePathToClass.Add("062119", Role.TANK);
         texturePathToClass.Add("062121", Role.TANK);
         texturePathToClass.Add("062132", Role.TANK);
         texturePathToClass.Add("062137", Role.TANK);
+        texturePathToClass.Add("062226", Role.TANK);
+        texturePathToClass.Add("062228", Role.TANK);
+        texturePathToClass.Add("062571", Role.TANK);
         texturePathToClass.Add("062102", Role.DPS);
         texturePathToClass.Add("062104", Role.DPS);
         texturePathToClass.Add("062105", Role.DPS);
@@ -63,6 +70,11 @@ public sealed class Plugin : IDalamudPlugin
         texturePathToClass.Add("062139", Role.DPS);
         texturePathToClass.Add("062141", Role.DPS);
         texturePathToClass.Add("062142", Role.DPS);
+        texturePathToClass.Add("062227", Role.DPS);
+        texturePathToClass.Add("062229", Role.DPS);
+        texturePathToClass.Add("062230", Role.DPS);
+        texturePathToClass.Add("062232", Role.DPS);
+        texturePathToClass.Add("062573", Role.DPS);
     }
 
     public string TextureIDFromPath(string path)
@@ -85,61 +97,54 @@ public sealed class Plugin : IDalamudPlugin
     private unsafe void OnPreDraw(AddonEvent type, AddonArgs args)
     {
         Colorize();
-        Log.Information($"{GameConfig.UiConfig.GetUInt("NamePlateColorDps")}");
+    }
+
+    public unsafe void ColorTextNodes(AtkTextNode* name, AtkImageNode* jobIcon)
+    {
+        if (name == null || String.IsNullOrEmpty(name->NodeText.ToString()))
+        {
+            return;
+        }
+
+        var isMissing = name->NodeText.ToString()[1] == 63 && name->NodeText.ToString()[2] == 63;
+
+        if (isMissing == false)
+        {
+            var jobIconPath = Marshal.PtrToStringAnsi(new(jobIcon->PartsList->Parts[0].UldAsset->AtkTexture.Resource->TexFileResourceHandle->ResourceHandle.FileName.BufferPtr));
+
+            if (jobIconPath == null)
+            {
+                return;
+            }
+
+            var job = RoleFromTexturePath(jobIconPath);
+            if (job == Role.DPS)
+            {
+                name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorDps");
+                name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeDps");
+            }
+            else if (job == Role.HEALER)
+            {
+                name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorHealer");
+                name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeHealer");
+            }
+            else if (job == Role.TANK)
+            {
+                name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorTank");
+                name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeTank");
+            }
+        }
     }
     public unsafe void Colorize()
     {
         var partyListAddon = (AddonPartyList*)GameGui.GetAddonByName("_PartyList");
         foreach (var member in partyListAddon->PartyMembers)
         {
-            if (member.Name == null || String.IsNullOrEmpty(member.Name->NodeText.ToString()))
-            {
-                continue;
-            }
-
-            var isMissing = member.Name->NodeText.ToString()[1] == 63 && member.Name->NodeText.ToString()[2] == 63;
-
-            if (isMissing == false)
-            {
-                var jobIcon = Marshal.PtrToStringAnsi(new(member.ClassJobIcon->PartsList->Parts[0].UldAsset->AtkTexture.Resource->TexFileResourceHandle->ResourceHandle.FileName.BufferPtr));
-
-                if (jobIcon == null)
-                {
-                    continue;
-                }
-
-                var job = RoleFromTexturePath(jobIcon);
-                if (job == Role.DPS)
-                {
-                    member.Name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorDps");
-                    member.Name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeDps");
-                }
-                else if (job == Role.HEALER)
-                {
-                    member.Name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorHealer");
-                    member.Name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeHealer");
-                }
-                else if (job == Role.TANK)
-                {
-                    member.Name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorTank");
-                    member.Name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeTank");
-                }
-                else
-                {
-                    continue;
-                }
-
-            }
-            else
-            {
-                continue;
-            }
+            ColorTextNodes(member.Name, member.ClassJobIcon);
         }
         foreach (var member in partyListAddon->TrustMembers)
         {
-            member.Name->TextColor.R = 0;
-            member.Name->TextColor.G = 255;
-            member.Name->TextColor.B = 0;
+            ColorTextNodes(member.Name, (AtkImageNode*)member.UnknownB0);
         }
     }
 
