@@ -1,0 +1,12 @@
+{
+    "Author": "Hwasani",
+    "Name": "Party Role Colors",
+    "Punchline": "Changes the color of your party members to match their roles.",
+    "Description": "Changes the color of your party members to match their roles.",
+    "ApplicableVersion": "any",
+    "Tags": [
+        "party",
+        "role",
+        "colors"
+    ]
+}
