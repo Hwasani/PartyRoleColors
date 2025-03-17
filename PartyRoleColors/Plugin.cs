@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.Addon.Lifecycle;
 using System.Text.RegularExpressions;
+using Dalamud.Game.Config;
 
 namespace PartyRoleColors;
 
@@ -24,6 +25,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IAddonLifecycle AddonLifeCycle { get; private set; } = null!;
+    [PluginService] internal static IGameConfig GameConfig { get; private set; } = null!;
 
     private Dictionary<string, Role> texturePathToClass = new Dictionary<string, Role>();
 
@@ -83,6 +85,7 @@ public sealed class Plugin : IDalamudPlugin
     private unsafe void OnPreDraw(AddonEvent type, AddonArgs args)
     {
         Colorize();
+        Log.Information($"{GameConfig.UiConfig.GetUInt("NamePlateColorDps")}");
     }
     public unsafe void Colorize()
     {
@@ -108,35 +111,18 @@ public sealed class Plugin : IDalamudPlugin
                 var job = RoleFromTexturePath(jobIcon);
                 if (job == Role.DPS)
                 {
-                    member.Name->TextColor.R = 255;
-                    member.Name->TextColor.G = 127;
-                    member.Name->TextColor.B = 127;
-
-                    member.Name->EdgeColor.R = 140;
-                    member.Name->EdgeColor.G = 0;
-                    member.Name->EdgeColor.B = 0;
-
+                    member.Name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorDps");
+                    member.Name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeDps");
                 }
                 else if (job == Role.HEALER)
                 {
-                    member.Name->TextColor.R = 128;
-                    member.Name->TextColor.G = 248;
-                    member.Name->TextColor.B = 96;
-
-                    member.Name->EdgeColor.R = 0;
-                    member.Name->EdgeColor.G = 84;
-                    member.Name->EdgeColor.B = 2;
+                    member.Name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorHealer");
+                    member.Name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeHealer");
                 }
                 else if (job == Role.TANK)
                 {
-                    member.Name->TextColor.R = 64;
-                    member.Name->TextColor.G = 159;
-                    member.Name->TextColor.B = 255;
-
-                    member.Name->EdgeColor.R = 32;
-                    member.Name->EdgeColor.G = 32;
-                    member.Name->EdgeColor.B = 64;
-
+                    member.Name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorTank");
+                    member.Name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeTank");
                 }
                 else
                 {
@@ -164,7 +150,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
-        throw new NotImplementedException();
+
     }
 
     public enum Role
