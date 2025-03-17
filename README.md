@@ -1,2 +1,2 @@
 # Party Role Colors
-Shit works like a packet yo.
+Changes party member names based on the role colors set in your Character Configuration
