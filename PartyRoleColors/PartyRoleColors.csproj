@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Version>0.0.0.1</Version>
     <Description>Changes the color of your party members to match their roles.</Description>
-    <PackageProjectUrl>https://github.com/goatcorp/SamplePlugin</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/Hwasani/PartyRoleColors</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
