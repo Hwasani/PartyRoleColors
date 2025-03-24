@@ -1,16 +1,14 @@
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using System;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.Addon.Lifecycle;
-using System.Text.RegularExpressions;
-using Dalamud.Game.Config;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Lumina.Excel.Sheets;
+using System.Linq;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
 
 namespace PartyRoleColors;
 
@@ -29,68 +27,58 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IAddonLifecycle AddonLifeCycle { get; private set; } = null!;
     [PluginService] internal static IGameConfig GameConfig { get; private set; } = null!;
 
-    private Dictionary<string, Role> texturePathToClass = new Dictionary<string, Role>(); // Dictionary that matches job icon filename to a role.
+    private Dictionary<ClassJob, Role> classJobToRole = new Dictionary<ClassJob, Role>() {
+        {ClassJob.Scholar, Role.HEALER},
+        {ClassJob.Astrologian, Role.HEALER},
+        {ClassJob.Sage, Role.HEALER},
+        {ClassJob.Conjurer, Role.HEALER},
+        {ClassJob.WhiteMage, Role.HEALER},
+        {ClassJob.Gladiator, Role.TANK},
+        {ClassJob.Marauder, Role.TANK},
+        {ClassJob.Warrior, Role.TANK},
+        {ClassJob.Gunbreaker, Role.TANK},
+        {ClassJob.DarkKnight, Role.TANK},
+        {ClassJob.Paladin, Role.TANK},
+        {ClassJob.Samurai, Role.DPS},
+        {ClassJob.Pugilist, Role.DPS},
+        {ClassJob.Monk, Role.DPS},
+        {ClassJob.Lancer, Role.DPS},
+        {ClassJob.Dragoon, Role.DPS},
+        {ClassJob.Machinist, Role.DPS},
+        {ClassJob.Rogue, Role.DPS},
+        {ClassJob.Ninja, Role.DPS},
+        {ClassJob.Pictomancer, Role.DPS},
+        {ClassJob.Reaper, Role.DPS},
+        {ClassJob.Viper, Role.DPS},
+        {ClassJob.Archer, Role.DPS},
+        {ClassJob.Arcanist, Role.DPS},
+        {ClassJob.Bard, Role.DPS},
+        {ClassJob.BlackMage, Role.DPS},
+        {ClassJob.Thaumaturge, Role.DPS},
+        {ClassJob.Dancer, Role.DPS},
+        {ClassJob.Summoner, Role.DPS},
+        {ClassJob.RedMage, Role.DPS},
+        {ClassJob.BlueMage, Role.DPS},
+    };
 
-    public void PopulateTexturePathToClassDictionary() // Function that fills the dictionary with entries
-    {
-        texturePathToClass.Clear();
-        texturePathToClass.Add("062106", Role.HEALER);
-        texturePathToClass.Add("062124", Role.HEALER);
-        texturePathToClass.Add("062128", Role.HEALER);
-        texturePathToClass.Add("062133", Role.HEALER);
-        texturePathToClass.Add("062140", Role.HEALER);
-        texturePathToClass.Add("062231", Role.HEALER);
-        texturePathToClass.Add("062572", Role.HEALER);
-        texturePathToClass.Add("062101", Role.TANK);
-        texturePathToClass.Add("062103", Role.TANK);
-        texturePathToClass.Add("062119", Role.TANK);
-        texturePathToClass.Add("062121", Role.TANK);
-        texturePathToClass.Add("062132", Role.TANK);
-        texturePathToClass.Add("062137", Role.TANK);
-        texturePathToClass.Add("062226", Role.TANK);
-        texturePathToClass.Add("062228", Role.TANK);
-        texturePathToClass.Add("062571", Role.TANK);
-        texturePathToClass.Add("062102", Role.DPS);
-        texturePathToClass.Add("062104", Role.DPS);
-        texturePathToClass.Add("062105", Role.DPS);
-        texturePathToClass.Add("062107", Role.DPS);
-        texturePathToClass.Add("062120", Role.DPS);
-        texturePathToClass.Add("062122", Role.DPS);
-        texturePathToClass.Add("062123", Role.DPS);
-        texturePathToClass.Add("062125", Role.DPS);
-        texturePathToClass.Add("062126", Role.DPS);
-        texturePathToClass.Add("062127", Role.DPS);
-        texturePathToClass.Add("062129", Role.DPS);
-        texturePathToClass.Add("062130", Role.DPS);
-        texturePathToClass.Add("062131", Role.DPS);
-        texturePathToClass.Add("062134", Role.DPS);
-        texturePathToClass.Add("062135", Role.DPS);
-        texturePathToClass.Add("062136", Role.DPS);
-        texturePathToClass.Add("062138", Role.DPS);
-        texturePathToClass.Add("062139", Role.DPS);
-        texturePathToClass.Add("062141", Role.DPS);
-        texturePathToClass.Add("062142", Role.DPS);
-        texturePathToClass.Add("062227", Role.DPS);
-        texturePathToClass.Add("062229", Role.DPS);
-        texturePathToClass.Add("062230", Role.DPS);
-        texturePathToClass.Add("062232", Role.DPS);
-        texturePathToClass.Add("062573", Role.DPS);
-    }
-
-    public string TextureIDFromPath(string path) //Takes a path arg and runs it through a regex to grab the .tex file name
-    {
-        var match = Regex.Match(path, @"ui/icon/\d+/(\d+)");
-        return match.Groups[1].Value;
-    }
-
-    public Role RoleFromTexturePath(string tex) // Function that returns the role from a file name.
-    {
-        return texturePathToClass.GetValueOrDefault(TextureIDFromPath(tex), Role.OTHER); // Search the dictionary for the filename, if found return the Role, if not found, return OTHER, which is a role in FFXIV
-    }
+    private Dictionary<ClassJob, int> jobPriorities = new Dictionary<ClassJob, int>{
+        {ClassJob.Pictomancer, 0},
+        {ClassJob.Samurai, 0},
+        {ClassJob.Reaper, 1},
+        {ClassJob.Viper, 2},
+        {ClassJob.Monk, 3},
+        {ClassJob.Ninja, 4},
+        {ClassJob.Dragoon, 5},
+        {ClassJob.BlackMage, 6},
+        {ClassJob.RedMage, 7},
+        {ClassJob.Summoner, 8},
+        {ClassJob.Machinist, 9},
+        {ClassJob.Bard, 10},
+        {ClassJob.Dancer, 15}
+    };
 
     public Plugin()
     {
-        PopulateTexturePathToClassDictionary(); // Ininstantiate dictionary
         AddonLifeCycle.RegisterListener(AddonEvent.PreDraw, new[] { "_PartyList" }, OnPreDraw); // Add a PartyList PreDraw event listener
     }
 
@@ -99,9 +87,9 @@ public sealed class Plugin : IDalamudPlugin
         Colorize(); // Call our main function on PreDraw, which is every time the PartyList is ready to be updated.
     }
 
-    public unsafe void ColorTextNodes(AtkTextNode* name, AtkImageNode* jobIcon) // Function that takes an AtkTextNode* called name & an AtkImageNode* called jobIcon as args
+    public unsafe void ColorTextNodes(AtkTextNode* name, ClassJob job) // Function that takes an AtkTextNode* called name & an AtkImageNode* called jobIcon as args
     {
-        if (name == null || String.IsNullOrEmpty(name->NodeText.ToString())) // If the party slot we're iterating over is empty, we skip it
+        if (name == null || string.IsNullOrEmpty(name->NodeText.ToString())) // If the party slot we're iterating over is empty, we skip it
         {
             return;
         }
@@ -110,54 +98,86 @@ public sealed class Plugin : IDalamudPlugin
 
         if (isMissing == false) // If there is no question marks in the level, we execute everything in the if statement.
         {
-            var jobIconPath = Marshal.PtrToStringAnsi(new(jobIcon->PartsList->Parts[0].UldAsset->AtkTexture.Resource->TexFileResourceHandle->ResourceHandle.FileName.BufferPtr)); // File name nested in a bunch of pointers in the AtkImageNode*
 
-            if (jobIconPath == null)
-            {
-                return;
-            }
-
-            var job = RoleFromTexturePath(jobIconPath);
-            if (job == Role.DPS)
+            var role = classJobToRole[job];
+            if (role == Role.DPS)
             {
                 name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorDps");
                 name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeDps");
             }
-            else if (job == Role.HEALER)
+            else if (role == Role.HEALER)
             {
                 name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorHealer");
                 name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeHealer");
             }
-            else if (job == Role.TANK)
+            else if (role == Role.TANK)
             {
                 name->TextColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateColorTank");
                 name->EdgeColor.RGBA = GameConfig.UiConfig.GetUInt("NamePlateEdgeTank");
             }
         }
     }
+
+    private unsafe bool isValidDancePartner(HudPartyMember member)
+    {
+        // If the object is null, it's not a valid member. (Carbuncle, etc)
+        if (member.Object == null)
+        {
+            return false;
+        }
+
+        // If the object is not a player character, it's not a valid member.
+        if (member.Object->ObjectKind != ObjectKind.Pc)
+        {
+            return false;
+        }
+
+        // If the object is the local player, it's not a valid member.
+        if (member.Object->ContentId == ClientState.LocalContentId)
+        {
+            return false;
+        }
+
+        // If the object is dead, it's not a valid member.
+        if (member.Object->IsDead())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     public unsafe void Colorize()
     {
+        var agentHud = AgentHUD.Instance();
+        var agentHudPartyMembers = agentHud->PartyMembers.ToArray();
+
         var partyListAddon = (AddonPartyList*)GameGui.GetAddonByName("_PartyList");
-        foreach (var member in partyListAddon->PartyMembers)
+
+        foreach (var member in agentHudPartyMembers)
         {
-            ColorTextNodes(member.Name, member.ClassJobIcon);
+            ColorTextNodes(partyListAddon->PartyMembers[member.Index].Name, (ClassJob)member.Object->ClassJob);
         }
-        foreach (var member in partyListAddon->TrustMembers)
+
+        var player = ClientState.LocalPlayer;
+        if ((ClassJob)player!.ClassJob.RowId == ClassJob.Dancer)
         {
-            ColorTextNodes(member.Name, (AtkImageNode*)member.UnknownB0);
+            var sortedParty = agentHudPartyMembers.Where(isValidDancePartner).OrderBy(member =>
+            {
+                return jobPriorities.GetValueOrDefault((ClassJob)member.Object->ClassJob, 100);
+            });
+
+            var mostImportant = sortedParty.First();
+            var mostImportantAddon = partyListAddon->PartyMembers[mostImportant.Index];
+
+            mostImportantAddon.Name->TextColor.R = 138;
+            mostImportantAddon.Name->TextColor.G = 43;
+            mostImportantAddon.Name->TextColor.B = 226;
         }
     }
 
     public void Dispose()
     {
 
-    }
-
-    public enum Role
-    {
-        TANK,
-        HEALER,
-        DPS,
-        OTHER
     }
 }
