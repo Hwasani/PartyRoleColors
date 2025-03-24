@@ -4,6 +4,9 @@ Changes your party member's name color based on their role.
 ![image](https://github.com/user-attachments/assets/e02667fd-3d3e-45bb-8850-865861753467)
 
 
+Also adds Purple highlights to the party member who would be your best dance parter (if you're a dancer.)
+
+
 ## Installing
 1. Download the zip from releases.
 2. Unzip it in the directory of your choosing.
