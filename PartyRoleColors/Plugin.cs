@@ -154,9 +154,22 @@ public sealed class Plugin : IDalamudPlugin
 
         var partyListAddon = (AddonPartyList*)GameGui.GetAddonByName("_PartyList");
 
+        foreach (var member in agentHudPartyMembers.Skip(1))
+        {
+            if (member.Object != null)
+            {
+                ColorTextNodes(partyListAddon->TrustMembers[member.Index - 1].Name, (ClassJob)member.Object->ClassJob);
+            }
+
+        }
+
         foreach (var member in agentHudPartyMembers)
         {
-            ColorTextNodes(partyListAddon->PartyMembers[member.Index].Name, (ClassJob)member.Object->ClassJob);
+            if (member.Object != null)
+            {
+                ColorTextNodes(partyListAddon->PartyMembers[member.Index].Name, (ClassJob)member.Object->ClassJob);
+            }
+
         }
 
         var player = ClientState.LocalPlayer;
